@@ -1,0 +1,284 @@
+/**
+ * HRD SMS Auth — login widget styles (theme-isolated, no !important).
+ *
+ * Isolation strategy: every rule is scoped under .hrd-auth, and form controls
+ * are scoped one level deeper (.hrd-auth .hrd-card …) so their specificity
+ * comfortably beats typical theme form rules without resorting to !important.
+ * A small reset neutralises inherited/leaked control properties. Colours and
+ * sizes come from CSS variables (injected by SettingsService) so admin theming
+ * keeps working.
+ */
+.hrd-auth {
+	--hrd-primary: #5957d8;
+	--hrd-btn-bg: #5957d8;
+	--hrd-btn-text: #ffffff;
+	--hrd-card-bg: #ffffff;
+	--hrd-card-width: 412px;
+	--hrd-card-radius: 22px;
+	--hrd-input-border: #dadce4;
+	--hrd-input-focus: #5957d8;
+	--hrd-text: #2b2f3b;
+	--hrd-error: #db4f44;
+	--hrd-success: #1fa873;
+
+	--hrd-primary-press: #4744bf;
+	--hrd-primary-press: color-mix(in srgb, var(--hrd-primary) 84%, #000);
+	--hrd-primary-soft: #ececfb;
+	--hrd-primary-soft: color-mix(in srgb, var(--hrd-primary) 12%, #fff);
+	--hrd-error-soft: #fcecea;
+	--hrd-error-soft: color-mix(in srgb, var(--hrd-error) 10%, #fff);
+	--hrd-success-soft: #e6f6ee;
+	--hrd-success-soft: color-mix(in srgb, var(--hrd-success) 12%, #fff);
+
+	--hrd-ink-soft: #6b7080;
+	--hrd-ink-faint: #99a0ad;
+	--hrd-line: #e6e8ee;
+	--hrd-field: #f9fafc;
+	--hrd-radius-field: 14px;
+	--hrd-violet: #7a4fd3;
+
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	box-sizing: border-box;
+	color: var(--hrd-text);
+	font-family: inherit;
+	direction: rtl;
+}
+
+.hrd-auth *,
+.hrd-auth *::before,
+.hrd-auth *::after { box-sizing: border-box; }
+
+/* ---- Control reset: neutralise inherited/leaked theme styles ---- */
+.hrd-auth .hrd-card input,
+.hrd-auth .hrd-card button,
+.hrd-auth .hrd-card select,
+.hrd-auth .hrd-card textarea,
+.hrd-auth .hrd-back-home {
+	font-family: inherit;
+	box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+	border: 0;
+	background: none;
+	box-shadow: none;
+	outline: none;
+	text-transform: none;
+	text-shadow: none;
+	letter-spacing: normal;
+	text-decoration: none;
+	line-height: normal;
+	min-width: 0;
+	max-width: none;
+	float: none;
+}
+
+.hrd-login-body { margin: 0; min-height: 100vh; }
+
+.hrd-auth--fullscreen {
+	position: fixed;
+	inset: 0;
+	width: 100vw;
+	min-height: 100vh;
+	min-height: 100dvh;
+	padding: 20px;
+	overflow: auto;
+	z-index: 100000;
+}
+
+.hrd-auth .hrd-shell {
+	width: 100%;
+	max-width: var(--hrd-card-width);
+	display: flex;
+	flex-direction: column;
+	gap: 18px;
+}
+
+/* Brand */
+.hrd-auth .hrd-brand { display: flex; align-items: center; justify-content: center; gap: 10px; padding-top: 4px; }
+.hrd-auth .hrd-brand-mark {
+	width: 38px; height: 38px; border-radius: 11px; flex: 0 0 auto;
+	display: grid; place-items: center; color: #fff; overflow: hidden;
+	background: linear-gradient(150deg, var(--hrd-primary), var(--hrd-violet));
+}
+.hrd-auth .hrd-brand-mark svg { width: 20px; height: 20px; }
+.hrd-auth .hrd-brand-mark--img { background: none; }
+.hrd-auth .hrd-brand-mark--img img { width: 100%; height: 100%; object-fit: contain; max-width: none; }
+.hrd-auth .hrd-brand-name { font-size: 18px; font-weight: 700; line-height: 1.3; letter-spacing: -.01em; color: var(--hrd-text); margin: 0; }
+
+/* Card */
+.hrd-auth .hrd-card {
+	position: relative;
+	background: var(--hrd-card-bg);
+	border: 1px solid var(--hrd-line);
+	border-radius: var(--hrd-card-radius);
+	padding: 30px 26px 26px;
+	margin: 0;
+	overflow: hidden;
+	text-align: right;
+}
+
+.hrd-auth .hrd-screen { animation: hrd-fade .42s cubic-bezier(.2,.7,.2,1); }
+@keyframes hrd-fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* Login-mode tabs */
+.hrd-auth .hrd-card .hrd-tabs { display: flex; gap: 6px; margin-bottom: 20px; padding: 4px; background: var(--hrd-field); border: 1px solid var(--hrd-input-border); border-radius: 12px; }
+.hrd-auth .hrd-card .hrd-tab { flex: 1; height: 40px; border: 0; border-radius: 9px; background: transparent; color: var(--hrd-ink-soft); font-family: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s, color .15s; }
+.hrd-auth .hrd-card .hrd-tab.is-active { background: var(--hrd-card-bg); color: var(--hrd-primary); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+
+/* Email form extras */
+.hrd-auth .hrd-card .hrd-remember { display: flex; align-items: center; gap: 8px; margin: 0 0 16px; font-size: 13px; color: var(--hrd-ink-soft); cursor: pointer; }
+.hrd-auth .hrd-card .hrd-remember input { width: 16px; height: 16px; -webkit-appearance: auto; appearance: auto; }
+.hrd-auth .hrd-card .hrd-formmsg { margin: 14px 0 0; min-height: 18px; font-size: 13px; text-align: center; }
+.hrd-auth .hrd-card .hrd-formmsg.is-err { color: var(--hrd-error); font-weight: 600; }
+.hrd-auth .hrd-card .hrd-formmsg.is-ok { color: var(--hrd-success); font-weight: 600; }
+
+/* Admin-only debug line */
+.hrd-auth .hrd-debug { max-width: var(--hrd-card-width); margin: 10px auto 0; padding: 6px 10px; font-size: 12px; color: var(--hrd-ink-faint); background: rgba(0,0,0,.04); border-radius: 8px; text-align: center; direction: ltr; }
+
+/* Head */
+.hrd-auth .hrd-card .hrd-head { margin-bottom: 22px; }
+.hrd-auth .hrd-card .hrd-step { font-size: 12.5px; color: var(--hrd-primary); font-weight: 600; line-height: 1.6; margin: 0 0 9px; display: flex; align-items: center; gap: 6px; }
+.hrd-auth .hrd-card .hrd-step-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--hrd-primary); flex: 0 0 auto; }
+.hrd-auth .hrd-card .hrd-h1 { font-size: 21px; font-weight: 700; letter-spacing: -.01em; line-height: 1.4; margin: 0; color: var(--hrd-text); }
+.hrd-auth .hrd-card .hrd-lead { margin: 7px 0 0; padding: 0; font-size: 14px; font-weight: 400; color: var(--hrd-ink-soft); line-height: 1.85; }
+
+/* Fields */
+.hrd-auth .hrd-card .hrd-field { margin: 0 0 16px; }
+.hrd-auth .hrd-card .hrd-field-label { display: block; font-size: 13px; font-weight: 600; color: var(--hrd-ink-soft); margin: 0 0 8px; line-height: 1.5; }
+.hrd-auth .hrd-card .hrd-control {
+	display: flex; align-items: center; gap: 10px;
+	flex-direction: row-reverse;
+	background: var(--hrd-field);
+	border: 1.5px solid var(--hrd-input-border);
+	border-radius: var(--hrd-radius-field);
+	padding: 0 14px; height: 52px; width: 100%; min-width: 0; box-sizing: border-box;
+	transition: border-color .16s, box-shadow .16s, background .16s;
+}
+.hrd-auth .hrd-card .hrd-control:focus-within { border-color: var(--hrd-input-focus); background: var(--hrd-card-bg); box-shadow: 0 0 0 4px var(--hrd-primary-soft); }
+.hrd-auth .hrd-card .hrd-control.is-bad { border-color: var(--hrd-error); box-shadow: 0 0 0 4px var(--hrd-error-soft); }
+.hrd-auth .hrd-card .hrd-control-pre { font-size: 14px; color: var(--hrd-ink-faint); font-weight: 600; direction: ltr; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.hrd-auth .hrd-card .hrd-control-pre svg { width: 18px; height: 18px; opacity: .7; }
+.hrd-auth .hrd-card .hrd-input {
+	flex: 1; width: auto; height: auto;
+	background: transparent;
+	font-size: 16px; color: var(--hrd-text); font-weight: 600; letter-spacing: .04em;
+}
+.hrd-auth .hrd-card .hrd-input::placeholder { color: var(--hrd-ink-faint); font-weight: 500; letter-spacing: normal; opacity: 1; }
+.hrd-auth .hrd-card .hrd-input.hrd-ltr { direction: ltr; text-align: left; }
+
+.hrd-auth .hrd-card .hrd-err { display: none; align-items: center; gap: 6px; color: var(--hrd-error); font-size: 12.5px; margin: 8px 0 0; font-weight: 500; }
+.hrd-auth .hrd-card .hrd-err svg { width: 14px; height: 14px; flex: none; }
+.hrd-auth .hrd-card .hrd-field.is-invalid .hrd-err { display: flex; }
+
+.hrd-auth .hrd-card .hrd-row2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-bottom: 16px}
+.hrd-auth .hrd-card .hrd-row2 .hrd-field { min-width: 0; }
+
+/* Jalali date selects */
+.hrd-auth .hrd-card .hrd-jdate { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) minmax(0, 1fr); gap: 9px; }
+.hrd-auth .hrd-card .hrd-sel { position: relative; }
+.hrd-auth .hrd-card .hrd-sel select {
+	width: 100%; height: 52px; -webkit-appearance: none; appearance: none;
+	background: var(--hrd-field); border: 1.5px solid var(--hrd-input-border); border-radius: var(--hrd-radius-field);
+	padding: 0 13px; font-size: 15px; font-weight: 600; color: var(--hrd-text);
+	cursor: pointer; transition: border-color .16s, box-shadow .16s;
+}
+.hrd-auth .hrd-card .hrd-sel select:focus { border-color: var(--hrd-input-focus); box-shadow: 0 0 0 4px var(--hrd-primary-soft); }
+.hrd-auth .hrd-card .hrd-sel select.is-placeholder { color: var(--hrd-ink-faint); font-weight: 500; }
+.hrd-auth .hrd-card .hrd-sel::after { content: ""; position: absolute; left: 13px; top: 50%; width: 8px; height: 8px; border-right: 2px solid var(--hrd-ink-faint); border-bottom: 2px solid var(--hrd-ink-faint); transform: translateY(-70%) rotate(45deg); pointer-events: none; }
+
+/* Button */
+.hrd-auth .hrd-card .hrd-btn {
+	width: 100%; height: 54px; border-radius: 15px; cursor: pointer;
+	font-size: 16px; font-weight: 700; color: var(--hrd-btn-text); line-height: 1;
+	background: var(--hrd-btn-bg); text-align: center;
+	display: flex; align-items: center; justify-content: center; gap: 9px;
+	transition: background .16s, transform .08s, box-shadow .16s; position: relative;
+}
+.hrd-auth .hrd-card .hrd-btn:hover:not(:disabled) { background: var(--hrd-primary-press); color: var(--hrd-btn-text); }
+.hrd-auth .hrd-card .hrd-btn:active:not(:disabled) { transform: translateY(1px); }
+.hrd-auth .hrd-card .hrd-btn:disabled { background: var(--hrd-input-border); color: var(--hrd-ink-faint); cursor: not-allowed; }
+.hrd-auth .hrd-card .hrd-btn:focus-visible { outline: 2px solid var(--hrd-primary); outline-offset: 2px; }
+.hrd-auth .hrd-card .hrd-spin { display: none; width: 20px; height: 20px; border: 2.5px solid #fff; border-top-color: transparent; border-radius: 50%; animation: hrd-spin .7s linear infinite; }
+.hrd-auth .hrd-card .hrd-btn.is-loading .hrd-btn-label { visibility: hidden; }
+.hrd-auth .hrd-card .hrd-btn.is-loading .hrd-spin { display: block; position: absolute; }
+@keyframes hrd-spin { to { transform: rotate(360deg); } }
+
+/* Back arrow (in-card) */
+.hrd-auth .hrd-card .hrd-back {
+	position: absolute; top: 24px; left: 24px; width: 40px; height: 34px; border-radius: 10px;
+	border: 1px solid var(--hrd-line); background: var(--hrd-card-bg); cursor: pointer;
+	display: grid; place-items: center; color: var(--hrd-ink-soft); transition: background .15s, color .15s;
+}
+.hrd-auth .hrd-card .hrd-back:hover { background: var(--hrd-field); color: var(--hrd-text); }
+.hrd-auth .hrd-card .hrd-back:focus-visible { outline: 2px solid var(--hrd-primary); outline-offset: 2px; }
+.hrd-auth .hrd-card .hrd-back svg { width: 17px; height: 17px; transform: rotate(0); }
+
+/* OTP */
+.hrd-auth .hrd-card .hrd-phone-tag {
+	display: inline-flex; align-items: center; gap: 8px; background: var(--hrd-field);
+	border: 1px solid var(--hrd-input-border); border-radius: 10px; padding: 7px 12px;
+	font-size: 13.5px; font-weight: 600; color: var(--hrd-text); margin: 12px 0 0;
+}
+.hrd-auth .hrd-card .hrd-phone-tag .hrd-num { direction: ltr; }
+.hrd-auth .hrd-card .hrd-phone-tag button { color: var(--hrd-primary); font-size: 12.5px; font-weight: 700; cursor: pointer; padding: 0 0 0 2px; height: auto; width: auto; }
+.hrd-auth .hrd-card .hrd-otp { display: flex; gap: 9px; direction: ltr; justify-content: center; margin: 24px 0 6px; }
+.hrd-auth .hrd-card .hrd-otp input {
+	width: 48px; height: 58px; text-align: center;
+	border: 1.5px solid var(--hrd-input-border); border-radius: 13px; background: var(--hrd-field);
+	font-size: 24px; font-weight: 700; color: var(--hrd-text);
+	transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.hrd-auth .hrd-card .hrd-otp input:focus { border-color: var(--hrd-input-focus); background: var(--hrd-card-bg); box-shadow: 0 0 0 4px var(--hrd-primary-soft); }
+.hrd-auth .hrd-card .hrd-otp input.is-filled { border-color: var(--hrd-primary); background: var(--hrd-primary-soft); }
+.hrd-auth .hrd-card .hrd-otp.is-bad input { border-color: var(--hrd-error); background: var(--hrd-error-soft); animation: hrd-shake .4s; }
+@keyframes hrd-shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+
+.hrd-auth .hrd-card .hrd-otp-err { justify-content: center; margin: 10px 0 0; }
+.hrd-auth .hrd-card .hrd-resend { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 18px 0 0; font-size: 13.5px; color: var(--hrd-ink-soft); }
+.hrd-auth .hrd-card .hrd-resend .hrd-timer { font-weight: 700; color: var(--hrd-text); direction: ltr; font-variant-numeric: tabular-nums; }
+.hrd-auth .hrd-card .hrd-resend button { color: var(--hrd-primary); font-size: 13.5px; font-weight: 700; cursor: pointer; height: auto; width: auto; }
+.hrd-auth .hrd-card .hrd-resend button:disabled { color: var(--hrd-ink-faint); cursor: default; }
+
+/* Success */
+.hrd-auth .hrd-card .hrd-success { text-align: center; padding: 14px 0 4px; }
+.hrd-auth .hrd-card .hrd-check { width: 84px; height: 84px; border-radius: 50%; background: var(--hrd-success-soft); display: grid; place-items: center; margin: 0 auto 22px; animation: hrd-pop .5s cubic-bezier(.2,1.3,.5,1) both; }
+.hrd-auth .hrd-card .hrd-check svg { width: 42px; height: 42px; color: var(--hrd-success); }
+.hrd-auth .hrd-card .hrd-check svg path { stroke-dasharray: 30; stroke-dashoffset: 30; animation: hrd-draw .5s .25s forwards cubic-bezier(.6,0,.3,1); }
+@keyframes hrd-pop { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes hrd-draw { to { stroke-dashoffset: 0; } }
+.hrd-auth .hrd-card .hrd-success h2 { font-size: 21px; font-weight: 700; margin: 0 0 9px; color: var(--hrd-text); line-height: 1.4; }
+.hrd-auth .hrd-card .hrd-success p { font-size: 14px; color: var(--hrd-ink-soft); line-height: 1.85; max-width: 300px; margin: 0 auto 26px; }
+
+/* Legal + back-home */
+.hrd-auth .hrd-legal { text-align: center; font-size: 11.5px; color: var(--hrd-ink-faint); line-height: 2; padding: 0 8px; margin: 0; }
+.hrd-auth .hrd-legal a, .hrd-auth .hrd-legal span { color: var(--hrd-ink-soft); text-decoration: none; font-weight: 600; }
+.hrd-auth .hrd-legal a:hover { text-decoration: underline; }
+.hrd-auth .hrd-noscript { text-align: center; color: var(--hrd-error); margin: 0; }
+
+.hrd-auth .hrd-back-home { display: inline-flex; align-items: center; gap: 6px; margin: 4px auto 0; padding: 8px 14px; font-size: 13px; font-weight: 600; color: var(--hrd-ink-soft); text-decoration: none; background: var(--hrd-card-bg); border: 1px solid var(--hrd-line); border-radius: 999px; }
+.hrd-auth .hrd-back-home:hover { background: var(--hrd-field); }
+.hrd-auth--fullscreen .hrd-back-home { position: fixed; }
+.hrd-auth--fullscreen .hrd-back-home[data-position="top-left"] { top: 18px; left: 18px; }
+.hrd-auth--fullscreen .hrd-back-home[data-position="top-right"] { top: 18px; right: 18px; }
+.hrd-auth--fullscreen .hrd-back-home[data-position="bottom-left"] { bottom: 18px; left: 18px; }
+.hrd-auth--fullscreen .hrd-back-home[data-position="bottom-right"] { bottom: 18px; right: 18px; }
+
+@media (prefers-reduced-motion: reduce) {
+	.hrd-auth .hrd-screen,
+	.hrd-auth .hrd-card .hrd-check,
+	.hrd-auth .hrd-card .hrd-check svg path,
+	.hrd-auth .hrd-card .hrd-otp.is-bad input { animation: none; }
+	.hrd-auth .hrd-card .hrd-spin { animation-duration: 1.4s; }
+}
+
+@media (max-width: 430px) {
+	.hrd-auth--fullscreen { padding: 0; align-items: stretch; }
+	.hrd-auth .hrd-shell { max-width: none; justify-content: center; padding: 22px 16px; gap: 16px; }
+	.hrd-auth .hrd-card { border-radius: 24px; }
+	.hrd-auth .hrd-card .hrd-otp input { width: 44px; height: 54px; font-size: 22px; }
+	.hrd-auth--fullscreen .hrd-back-home { position: static; align-self: center; }
+}

@@ -1,0 +1,16 @@
+# Dependencies / build artifacts
+node_modules/
+vendor/
+*.log
+
+# Packaged builds
+*.zip
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
