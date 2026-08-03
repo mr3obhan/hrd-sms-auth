@@ -109,6 +109,12 @@
 .hrd-auth .hrd-brand-mark--img img { width: 100%; height: 100%; object-fit: contain; max-width: none; }
 .hrd-auth .hrd-brand-name { font-size: 18px; font-weight: 700; line-height: 1.3; letter-spacing: -.01em; color: var(--hrd-text); margin: 0; }
 
+/* Logo-only brand mark: no fixed icon box, image sizes itself via its own width. */
+.hrd-auth .hrd-brand--logo-only .hrd-brand-mark--img {
+	width: auto; height: auto; border-radius: 0; overflow: visible;
+}
+.hrd-auth .hrd-brand--logo-only .hrd-brand-mark--img img { height: auto; max-width: 100%; object-fit: contain; }
+
 /* Card */
 .hrd-auth .hrd-card {
 	position: relative;

@@ -44,7 +44,7 @@ class Admin {
 	/* ----------------------------- Assets ----------------------------- */
 
 	public function enqueue_assets( $hook ): void {
-		if ( $hook !== 'settings_page_' . self::PAGE ) {
+		if ( $hook !== 'toplevel_page_' . self::PAGE ) {
 			return;
 		}
 
@@ -77,12 +77,13 @@ class Admin {
 	/* ----------------------------- Menu ------------------------------- */
 
 	public function add_menu(): void {
-		add_options_page(
-			'تنظیمات ورود با پیامک',
-			'ورود با پیامک',
+		add_menu_page(
+			'تنظیمات ورود/ثبت نام همراکت',
+			'ورود/ثبت نام همراکت',
 			'manage_options',
 			self::PAGE,
-			[ $this, 'render_page' ]
+			[ $this, 'render_page' ],
+			'dashicons-smartphone'
 		);
 	}
 
@@ -92,7 +93,7 @@ class Admin {
 		}
 		?>
 		<div class="wrap hrd-settings">
-			<h1>تنظیمات افزونه ورود با پیامک</h1>
+			<h1>تنظیمات ورود/ثبت نام همراکت</h1>
 			<h2 class="nav-tab-wrapper hrd-tabs">
 				<?php $first = true;
 				foreach ( $this->tabs as $key => $label ) : ?>
@@ -132,6 +133,7 @@ class Admin {
 		$this->field( 'general', 'login_subtitle', 'زیرعنوان فرم ورود', fn() => $this->text( 'login_subtitle' ) );
 		$this->field( 'general', 'show_logo', 'نمایش لوگو/برند', fn() => $this->checkbox( 'show_logo', 'لوگو و نام برند بالای کارت نمایش داده شود' ) );
 		$this->field( 'general', 'logo_url', 'آدرس لوگو', fn() => $this->media( 'logo_url' ) );
+		$this->field( 'general', 'logo_width', 'عرض لوگو (px)', fn() => $this->number( 'logo_width', 20, 600, 'در صورت انتخاب لوگو، فقط تصویر لوگو (بدون نام برند) با این عرض نمایش داده می‌شود.' ) );
 		$this->field( 'general', 'login_slug', 'نشانی صفحه ورود', fn() => $this->text( 'login_slug', 'hrd-login', 'پس از تغییر، پیوندهای یکتا یک‌بار به‌روزرسانی می‌شوند.' ) );
 		$this->field( 'general', 'show_legal', 'نمایش متن قوانین', fn() => $this->checkbox( 'show_legal', 'فوتر «قوانین و حریم خصوصی» نمایش داده شود' ) );
 		$this->field( 'general', 'terms_url', 'لینک قوانین و مقررات', fn() => $this->text( 'terms_url', '', 'خالی بگذارید تا فقط متن بدون لینک نمایش داده شود.' ) );

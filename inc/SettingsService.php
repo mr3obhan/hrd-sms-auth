@@ -52,6 +52,7 @@ class SettingsService {
 			'login_subtitle'         => 'text',
 			'show_logo'              => 'bool',
 			'logo_url'               => 'url',
+			'logo_width'             => 'int',
 			'load_font'              => 'bool',
 			'show_legal'             => 'bool',
 			'terms_url'              => 'url',
@@ -115,6 +116,7 @@ class SettingsService {
 			'login_subtitle'         => 'شماره موبایل خود را وارد کنید. کد تأیید برای شما پیامک می‌شود.',
 			'show_logo'              => 1,
 			'logo_url'               => '',
+			'logo_width'             => 160,
 			'load_font'              => 1,
 			'show_legal'             => 1,
 			'terms_url'              => '',
@@ -274,6 +276,8 @@ class SettingsService {
 				return max( 300, min( 720, $value ?: $default ) );
 			case 'card_radius':
 				return max( 0, min( 40, $value ) );
+			case 'logo_width':
+				return max( 20, min( 600, $value ?: $default ) );
 			default:
 				return $value;
 		}
