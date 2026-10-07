@@ -119,9 +119,20 @@ class LoginControl {
 
 		$login_url = home_url( '/' . self::$slug );
 
-		// Guests should not reach checkout — bounce to login, return after.
+		// If checkout page is accessed by guests, only bounce if guest checkout is disabled
+		// and never bounce from the order confirmation (Thank You) or order-pay pages.
 		if ( function_exists( 'is_checkout' ) && is_checkout() ) {
-			$login_url = add_query_arg( 'redirect_to', rawurlencode( wc_get_checkout_url() ), $login_url );
+			if ( ( function_exists( 'is_order_received_page' ) && is_order_received_page() )
+				|| ( function_exists( 'is_wc_endpoint_url' ) && is_wc_endpoint_url( 'order-pay' ) ) ) {
+				return;
+			}
+
+			// Respect WooCommerce guest checkout option
+			if ( 'yes' === get_option( 'woocommerce_enable_guest_checkout', 'yes' ) ) {
+				return;
+			}
+
+			$login_url = add_query_arg( 'redirect_to', wc_get_checkout_url(), $login_url );
 			wp_safe_redirect( $login_url );
 			exit;
 		}
@@ -130,7 +141,7 @@ class LoginControl {
 		if ( function_exists( 'is_account_page' ) && is_account_page() ) {
 			if ( ! empty( $_GET['redirect_to'] ) ) {
 				$target    = wp_validate_redirect( esc_url_raw( wp_unslash( $_GET['redirect_to'] ) ), '' );
-				$login_url = $target ? add_query_arg( 'redirect_to', rawurlencode( $target ), $login_url ) : $login_url;
+				$login_url = $target ? add_query_arg( 'redirect_to', $target, $login_url ) : $login_url;
 			}
 			wp_safe_redirect( $login_url );
 			exit;

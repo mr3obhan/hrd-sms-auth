@@ -9,6 +9,7 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 delete_option( 'hrd_sms_auth_options' );
 delete_option( '_hrd_needs_rewrite_flush' );
 delete_option( 'hrd_sms_auth_installed_at' );
+delete_option( 'hrd_digits_migration_log' );
 
 // Clean up orphaned options from the removed telemetry feature.
 delete_option( 'hrd-sms-auth_telemetry_version' );
@@ -21,5 +22,8 @@ global $wpdb;
 $wpdb->query(
 	"DELETE FROM {$wpdb->options}
 	 WHERE option_name LIKE '\_transient\_hrd\_sms\_%'
-	    OR option_name LIKE '\_transient\_timeout\_hrd\_sms\_%'"
+	    OR option_name LIKE '\_transient\_timeout\_hrd\_sms\_%'
+	    OR option_name LIKE '\_transient\_hrd\_email\_fail\_%'
+	    OR option_name LIKE '\_transient\_timeout\_hrd\_email\_fail\_%'
+	    OR option_name IN ('\_transient\_hrd\_digits\_detected', '\_transient\_timeout\_hrd\_digits\_detected')"
 );

@@ -3,7 +3,7 @@
 /**
  * Plugin Name: SMS Login & Register
  * Description: افزونه ثبت‌نام و ورود با شماره موبایل برای وردپرس و ووکامرس
- * Version: 2.7.0
+ * Version: 2.8.1
  * Author: HRD Dev Team
  * Author URI: https://hamrocket.com
  * Text Domain: hrd-sms-auth

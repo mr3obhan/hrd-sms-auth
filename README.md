@@ -57,6 +57,17 @@ Both endpoints require a valid `wp_rest` nonce in the `X-WP-Nonce` header.
 their name **after** submitting a correct code (`verify-code` replies with
 `needs_registration: true`).
 
+## Security model
+
+- Only a mobile-number username or an OTP-verified `hrd_phone` is accepted as a
+  login identity. WooCommerce billing/shipping phones are contact data only.
+- OTP values are stored as keyed hashes; legacy plaintext transients are accepted
+  only until their already-existing expiry time.
+- Brute-force limits apply per mobile/IP pair, per mobile across all IPs, and per
+  IP across all mobiles. Provider failures also consume the send allowance.
+- A mobile number and national ID cannot be assigned to a second account through
+  the plugin flows.
+
 ## Build
 
 There is **no build step** — the frontend is plain ES5-compatible JavaScript.

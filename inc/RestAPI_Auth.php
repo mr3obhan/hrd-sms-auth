@@ -35,13 +35,20 @@ class RestAPI_Auth {
 			],
 		] );
 
+		register_rest_route( 'hrd-sms-auth/v1', '/nonce', [
+			'methods'             => 'GET',
+			'callback'            => [ $this, 'get_nonce' ],
+			'permission_callback' => '__return_true',
+		] );
+
 		register_rest_route( 'hrd-sms-auth/v1', '/verify-code', [
 			'methods'             => 'POST',
 			'callback'            => [ $this, 'verify_code' ],
 			'permission_callback' => [ $this, 'check_rest_nonce' ],
 			'args'                => [
 				'mobile'        => [ 'type' => 'string', 'required' => true ],
-				'code'          => [ 'type' => 'string', 'required' => true ],
+				'code'          => [ 'type' => 'string', 'required' => false ],
+				'reg_token'     => [ 'type' => 'string', 'required' => false ],
 				'first_name'    => [ 'type' => 'string', 'required' => false ],
 				'last_name'     => [ 'type' => 'string', 'required' => false ],
 				'national_code' => [ 'type' => 'string', 'required' => false ],
@@ -125,6 +132,10 @@ class RestAPI_Auth {
 		return $this->respond( $result );
 	}
 
+	public function get_nonce(): WP_REST_Response {
+		return new WP_REST_Response( [ 'nonce' => wp_create_nonce( 'wp_rest' ) ], 200 );
+	}
+
 	public function verify_code( WP_REST_Request $request ): WP_REST_Response {
 		$result = OtpService::verify(
 			$request->get_param( 'mobile' ),
@@ -134,6 +145,7 @@ class RestAPI_Auth {
 				'last_name'     => (string) $request->get_param( 'last_name' ),
 				'national_code' => (string) $request->get_param( 'national_code' ),
 				'birth_date'    => (string) $request->get_param( 'birth_date' ),
+				'reg_token'     => (string) $request->get_param( 'reg_token' ),
 			]
 		);
 

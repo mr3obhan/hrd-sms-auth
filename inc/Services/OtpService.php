@@ -54,7 +54,10 @@ class OtpService {
 
 		$code = self::generate_code();
 
-		// Send first; only persist the code once the provider has accepted it.
+		// Count every provider attempt, including failures. Otherwise a failing
+		// provider can be hammered without consuming the rate limit.
+		RateLimiter::record_send( $mobile );
+
 		$sent = SmsIrGateway::send_verify( $mobile, $code );
 
 		if ( ! $sent['success'] ) {
@@ -63,8 +66,7 @@ class OtpService {
 			return self::result( false, 502, 'خطا در ارسال پیامک. لطفاً دوباره تلاش کنید.' );
 		}
 
-		set_transient( Config::CODE_PREFIX . $mobile, $code, Config::expiration_seconds() );
-		RateLimiter::record_send( $mobile );
+		set_transient( Config::CODE_PREFIX . $mobile, self::code_record( $mobile, $code ), Config::expiration_seconds() );
 
 		return self::result( true, 200, 'کد تأیید به شماره موبایل ارسال شد.', [
 			'timer'       => Config::expiration_seconds(),
@@ -91,36 +93,71 @@ class OtpService {
 			return self::result( false, 422, $validation['text'] ?: 'شماره موبایل نامعتبر است.' );
 		}
 
-		$stored_code = get_transient( Config::CODE_PREFIX . $mobile );
-		if ( ! $stored_code ) {
-			return self::result( false, 410, 'کد منقضی شده است، لطفاً مجدد درخواست دهید.' );
+		$reg_token            = sanitize_text_field( (string) ( $profile['reg_token'] ?? '' ) );
+		$is_registration_flow = false;
+
+		if ( $reg_token !== '' ) {
+			$reg_data = get_transient( 'hrd_reg_' . md5( $reg_token ) );
+			if ( ! is_array( $reg_data ) || ( $reg_data['mobile'] ?? '' ) !== $mobile ) {
+				return self::result( false, 410, 'نشست ثبت‌نام منقضی شده است، لطفاً دوباره شماره خود را وارد کنید.' );
+			}
+			$is_registration_flow = true;
+		} else {
+			$stored_code = get_transient( Config::CODE_PREFIX . $mobile );
+			if ( ! $stored_code ) {
+				return self::result( false, 410, 'کد منقضی شده است، لطفاً مجدد درخواست دهید.' );
+			}
+
+			if ( ! RateLimiter::verify_allowed( $mobile ) ) {
+				return self::result( false, 429, 'تلاش بیش از حد مجاز است. لطفاً کمی بعد دوباره امتحان کنید.' );
+			}
+
+			if ( ! self::code_matches( $mobile, $code, $stored_code ) ) {
+				RateLimiter::record_failed_verify( $mobile );
+
+				return self::result( false, 401, 'کد تأیید نادرست است.' );
+			}
 		}
 
-		if ( ! RateLimiter::verify_allowed( $mobile ) ) {
-			return self::result( false, 429, 'تلاش بیش از حد مجاز است. لطفاً کمی بعد دوباره امتحان کنید.' );
+		// Correct code or valid reg_token from here on.
+		if ( Users::mobile_has_conflict( $mobile ) ) {
+			self::log( 'ambiguous mobile ownership for ' . $mobile );
+
+			return self::result( false, 409, 'این شماره به بیش از یک حساب متصل است. لطفاً با پشتیبانی تماس بگیرید.' );
 		}
 
-		if ( ! hash_equals( (string) $stored_code, (string) $code ) ) {
-			RateLimiter::record_failed_verify( $mobile );
-
-			return self::result( false, 401, 'کد تأیید نادرست است.' );
-		}
-
-		// Correct code from here on.
 		$user_id = Users::hrd_sms_user_exist( $mobile );
 
 		if ( ! $user_id ) {
+			// Only a username or OTP-verified phone reserves the login identity.
+			// Unverified/manual phone metadata must not block a new registration.
+			if ( Users::mobile_owned_by_other( $mobile ) ) {
+				return self::result( false, 409, 'این شماره قبلاً برای حساب دیگری ثبت شده است.' );
+			}
 			$registration = self::register_new_user( $mobile, $profile );
 
 			if ( ! $registration['ok'] ) {
-				return $registration; // needs_registration / validation error (OTP kept valid)
+				if ( ! $is_registration_flow ) {
+					// Invalidate OTP immediately and issue a 15-minute registration session token
+					delete_transient( Config::CODE_PREFIX . $mobile );
+					RateLimiter::clear_verify( $mobile );
+
+					$token = wp_generate_password( 32, false );
+					set_transient( 'hrd_reg_' . md5( $token ), [ 'mobile' => $mobile ], 15 * MINUTE_IN_SECONDS );
+					$registration['data']['reg_token'] = $token;
+				}
+
+				return $registration;
 			}
 
 			$user_id = $registration['user_id'];
 		}
 
-		// Success: invalidate the code and clear counters, then sign in.
+		// Success: invalidate the code and registration token, clear counters, then sign in.
 		delete_transient( Config::CODE_PREFIX . $mobile );
+		if ( $reg_token !== '' ) {
+			delete_transient( 'hrd_reg_' . md5( $reg_token ) );
+		}
 		RateLimiter::clear_verify( $mobile );
 
 		// They proved control of this mobile → mark it verified.
@@ -129,6 +166,10 @@ class OtpService {
 
 		wp_set_current_user( $user_id );
 		wp_set_auth_cookie( $user_id, true );
+		$user = get_userdata( $user_id );
+		if ( $user instanceof \WP_User ) {
+			do_action( 'wp_login', $user->user_login, $user );
+		}
 
 		return self::result( true, 200, 'ورود موفقیت‌آمیز بود.', [ 'user_id' => (int) $user_id ] );
 	}
@@ -160,15 +201,14 @@ class OtpService {
 			return self::result( false, 429, 'تلاش بیش از حد مجاز است. لطفاً کمی بعد دوباره امتحان کنید.' );
 		}
 
-		if ( ! hash_equals( (string) $stored_code, (string) $code ) ) {
+		if ( ! self::code_matches( $mobile, $code, $stored_code ) ) {
 			RateLimiter::record_failed_verify( $mobile );
 
 			return self::result( false, 401, 'کد تأیید نادرست است.' );
 		}
 
 		// Make sure the number isn't already tied to a different account.
-		$owner = Users::hrd_sms_user_exist( $mobile );
-		if ( $owner && (int) $owner !== $user_id ) {
+		if ( Users::mobile_owned_by_other( $mobile, $user_id ) ) {
 			return self::result( false, 409, 'این شماره قبلاً برای حساب دیگری ثبت شده است.' );
 		}
 
@@ -212,6 +252,13 @@ class OtpService {
 		if ( $need_profile && ! Helper::valid_national_id( $national ) ) {
 			return self::result( false, 422, 'کد ملی وارد شده معتبر نیست.', [ 'field' => 'national_code' ] );
 		}
+		if ( $need_profile && Users::national_code_owned( $national ) ) {
+			return self::result( false, 409, 'این کد ملی قبلاً برای حساب دیگری ثبت شده است.', [ 'field' => 'national_code' ] );
+		}
+
+		if ( $need_profile && ! Helper::valid_birth_date( $birth_date ) ) {
+			return self::result( false, 422, 'تاریخ تولد وارد شده معتبر نیست.', [ 'field' => 'birth' ] );
+		}
 
 		$user_id = Users::hrd_sms_create_user( $mobile, [
 			'user_login'   => $mobile,
@@ -234,6 +281,25 @@ class OtpService {
 		}
 
 		return [ 'ok' => true, 'user_id' => (int) $user_id ];
+	}
+
+	/** Store only an HMAC of the OTP. */
+	private static function code_record( string $mobile, string $code ): array {
+		return [
+			'v'    => 2,
+			'hash' => hash_hmac( 'sha256', $mobile . '|' . $code, wp_salt( 'auth' ) ),
+		];
+	}
+
+	/** Accept legacy plaintext transients only until their existing TTL expires. */
+	private static function code_matches( string $mobile, string $code, $stored ): bool {
+		if ( is_array( $stored ) && isset( $stored['hash'] ) ) {
+			$actual = hash_hmac( 'sha256', $mobile . '|' . $code, wp_salt( 'auth' ) );
+
+			return hash_equals( (string) $stored['hash'], $actual );
+		}
+
+		return is_scalar( $stored ) && hash_equals( (string) $stored, $code );
 	}
 
 	private static function result( bool $ok, int $status, string $message, array $data = [] ): array {

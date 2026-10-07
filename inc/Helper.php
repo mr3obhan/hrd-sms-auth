@@ -26,9 +26,37 @@ class Helper {
 	 * Return the client IP in a simple, sanitised way.
 	 */
 	public static function hrd_user_ip(): string {
-		return isset( $_SERVER['REMOTE_ADDR'] )
-			? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) )
-			: '0.0.0.0';
+		$headers = [
+			'HTTP_CF_CONNECTING_IP',
+			'HTTP_AR_REAL_IP',
+			'HTTP_X_REAL_IP',
+			'HTTP_X_FORWARDED_FOR',
+			'REMOTE_ADDR',
+		];
+
+		$ip = '';
+		foreach ( $headers as $header ) {
+			if ( ! empty( $_SERVER[ $header ] ) ) {
+				$raw = sanitize_text_field( wp_unslash( $_SERVER[ $header ] ) );
+				if ( str_contains( $raw, ',' ) ) {
+					$parts = explode( ',', $raw );
+					$raw   = trim( $parts[0] );
+				}
+				$clean = filter_var( $raw, FILTER_VALIDATE_IP );
+				if ( $clean !== false ) {
+					$ip = $clean;
+					break;
+				}
+			}
+		}
+
+		if ( $ip === '' ) {
+			$ip = isset( $_SERVER['REMOTE_ADDR'] )
+				? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) )
+				: '0.0.0.0';
+		}
+
+		return (string) apply_filters( 'hrd_client_ip', $ip );
 	}
 
 	/**
@@ -99,5 +127,18 @@ class Helper {
 		$c = (int) $code[9];
 
 		return $r < 2 ? $c === $r : $c === ( 11 - $r );
+	}
+
+	/** Validate the Jalali YYYY/MM/DD shape and month/day ranges. */
+	public static function valid_birth_date( string $date ): bool {
+		if ( ! preg_match( '/^(13\d{2}|14\d{2})\/(0[1-9]|1[0-2])\/(0[1-9]|[12]\d|3[01])$/', $date, $m ) ) {
+			return false;
+		}
+		$month = (int) $m[2];
+		$day   = (int) $m[3];
+		$year  = (int) $m[1];
+		$latest_year = (int) gmdate( 'Y' ) - 621 - 12;
+
+		return $year >= 1320 && $year <= $latest_year && $day <= ( $month <= 6 ? 31 : 30 );
 	}
 }

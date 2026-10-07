@@ -23,6 +23,22 @@ class RateLimiter {
 		return 'hrd_sms_' . $type . '_' . md5( $mobile . '|' . Helper::hrd_user_ip() );
 	}
 
+	private static function mobile_key( string $type, string $mobile ): string {
+		return 'hrd_sms_' . $type . '_mobile_' . md5( $mobile );
+	}
+
+	private static function ip_key( string $type ): string {
+		return 'hrd_sms_' . $type . '_ip_' . md5( Helper::hrd_user_ip() );
+	}
+
+	private static function count( string $key ): int {
+		return (int) ( get_transient( $key ) ?: 0 );
+	}
+
+	private static function increment( string $key, int $ttl ): void {
+		set_transient( $key, self::count( $key ) + 1, $ttl );
+	}
+
 	/* ---------------- Sending OTP ---------------- */
 
 	/**
@@ -30,7 +46,9 @@ class RateLimiter {
 	 */
 	public static function send_allowed( string $mobile ): bool {
 		$hard = (int) ( get_transient( self::key( 'send_hard', $mobile ) ) ?: 0 );
-		if ( $hard >= Config::HARD_SEND_MAX ) {
+		$by_mobile = self::count( self::mobile_key( 'send_hard', $mobile ) );
+		$by_ip     = self::count( self::ip_key( 'send_hard' ) );
+		if ( $hard >= Config::HARD_SEND_MAX || $by_mobile >= Config::HARD_SEND_MAX || $by_ip >= Config::HARD_IP_SEND_MAX ) {
 			return false;
 		}
 
@@ -45,8 +63,10 @@ class RateLimiter {
 	}
 
 	public static function record_send( string $mobile ): void {
-		$hard = (int) ( get_transient( self::key( 'send_hard', $mobile ) ) ?: 0 );
-		set_transient( self::key( 'send_hard', $mobile ), $hard + 1, Config::HARD_WINDOW_MINUTES * MINUTE_IN_SECONDS );
+		$ttl = Config::HARD_WINDOW_MINUTES * MINUTE_IN_SECONDS;
+		self::increment( self::key( 'send_hard', $mobile ), $ttl );
+		self::increment( self::mobile_key( 'send_hard', $mobile ), $ttl );
+		self::increment( self::ip_key( 'send_hard' ), $ttl );
 
 		if ( Config::soft_limit_enabled() ) {
 			$soft = (int) ( get_transient( self::key( 'send_soft', $mobile ) ) ?: 0 );
@@ -58,7 +78,9 @@ class RateLimiter {
 
 	public static function verify_allowed( string $mobile ): bool {
 		$hard = (int) ( get_transient( self::key( 'verify_hard', $mobile ) ) ?: 0 );
-		if ( $hard >= Config::HARD_VERIFY_MAX ) {
+		$by_mobile = self::count( self::mobile_key( 'verify_hard', $mobile ) );
+		$by_ip     = self::count( self::ip_key( 'verify_hard' ) );
+		if ( $hard >= Config::HARD_VERIFY_MAX || $by_mobile >= Config::HARD_MOBILE_VERIFY_MAX || $by_ip >= Config::HARD_IP_VERIFY_MAX ) {
 			return false;
 		}
 
@@ -73,8 +95,10 @@ class RateLimiter {
 	}
 
 	public static function record_failed_verify( string $mobile ): void {
-		$hard = (int) ( get_transient( self::key( 'verify_hard', $mobile ) ) ?: 0 );
-		set_transient( self::key( 'verify_hard', $mobile ), $hard + 1, Config::HARD_WINDOW_MINUTES * MINUTE_IN_SECONDS );
+		$ttl = Config::HARD_WINDOW_MINUTES * MINUTE_IN_SECONDS;
+		self::increment( self::key( 'verify_hard', $mobile ), $ttl );
+		self::increment( self::mobile_key( 'verify_hard', $mobile ), $ttl );
+		self::increment( self::ip_key( 'verify_hard' ), $ttl );
 
 		if ( Config::soft_limit_enabled() ) {
 			$soft = (int) ( get_transient( self::key( 'verify_soft', $mobile ) ) ?: 0 );
@@ -88,6 +112,8 @@ class RateLimiter {
 	public static function clear_verify( string $mobile ): void {
 		delete_transient( self::key( 'verify_hard', $mobile ) );
 		delete_transient( self::key( 'verify_soft', $mobile ) );
+		// Keep global mobile/IP counters: clearing those would let one successful
+		// request reset brute-force protection for every client.
 	}
 
 	/* ---------------- Email/password login (per-IP) ---------------- */

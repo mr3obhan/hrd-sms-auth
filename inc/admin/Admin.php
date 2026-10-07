@@ -446,9 +446,20 @@ class Admin {
 		if ( ! current_user_can( 'edit_user', $user_id ) ) {
 			return;
 		}
-		if ( isset( $_POST['hrd_phone'] ) ) {
-			update_user_meta( $user_id, 'hrd_phone', sanitize_text_field( wp_unslash( $_POST['hrd_phone'] ) ) );
+		// Existing verified identities may only change through the OTP flow.
+		if ( ! isset( $_POST['hrd_phone'] ) || get_user_meta( $user_id, 'hrd_phone', true ) !== '' ) {
+			return;
 		}
+
+		$mobile = Helper::hrd_normalize_mobile( wp_unslash( $_POST['hrd_phone'] ) );
+		if ( ! $mobile || Users::mobile_owned_by_other( $mobile, (int) $user_id ) ) {
+			return;
+		}
+
+		// Administrative entry is intentionally not marked verified. The user
+		// must still prove possession through attach-mobile before OTP login.
+		update_user_meta( $user_id, 'hrd_phone', $mobile );
+		delete_user_meta( $user_id, 'hrd_mobile_verified' );
 	}
 }
 

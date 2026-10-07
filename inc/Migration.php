@@ -105,12 +105,24 @@ class DigitsMigration {
 		$reverted = 0;
 
 		foreach ( $users as $uid ) {
-			$backup = get_user_meta( $uid, self::BACKUP_META, true );
-			if ( $backup === '__none__' || $backup === '' ) {
+			$backup       = get_user_meta( $uid, self::BACKUP_META, true );
+			$phone        = is_array( $backup ) ? ( $backup['phone'] ?? '' ) : $backup;
+			$was_verified = is_array( $backup ) ? ! empty( $backup['verified'] ) : null;
+
+			if ( $phone === '__none__' || $phone === '' ) {
 				delete_user_meta( $uid, 'hrd_phone' );
 			} else {
-				update_user_meta( $uid, 'hrd_phone', $backup );
+				update_user_meta( $uid, 'hrd_phone', $phone );
 			}
+
+			if ( $was_verified !== null ) {
+				if ( ! $was_verified ) {
+					delete_user_meta( $uid, 'hrd_mobile_verified' );
+				}
+			} elseif ( $phone === '__none__' || $phone === '' ) {
+				delete_user_meta( $uid, 'hrd_mobile_verified' );
+			}
+
 			delete_user_meta( $uid, self::BACKUP_META );
 			$reverted++;
 		}
@@ -208,8 +220,7 @@ class DigitsMigration {
 			}
 
 			// Number already owned by a different account → skip.
-			$owner = Users::hrd_sms_user_exist( $norm );
-			if ( $owner && (int) $owner !== (int) $uid ) {
+			if ( Users::mobile_owned_by_other( $norm, (int) $uid ) ) {
 				$stats['conflicts']++;
 				continue;
 			}
@@ -221,7 +232,11 @@ class DigitsMigration {
 			}
 
 			// Back up before changing anything (so the migration is reversible).
-			update_user_meta( $uid, self::BACKUP_META, $existing !== '' ? $existing : '__none__' );
+			$was_verified = ! empty( get_user_meta( $uid, 'hrd_mobile_verified', true ) );
+			update_user_meta( $uid, self::BACKUP_META, [
+				'phone'    => $existing !== '' ? $existing : '__none__',
+				'verified' => $was_verified ? 1 : 0,
+			] );
 			update_user_meta( $uid, 'hrd_phone', $norm );
 
 			if ( empty( get_user_meta( $uid, 'billing_phone', true ) ) ) {

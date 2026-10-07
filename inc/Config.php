@@ -32,6 +32,9 @@ class Config {
 	 */
 	const HARD_SEND_MAX = 10;       // max OTP requests per window
 	const HARD_VERIFY_MAX = 10;     // max verify attempts per window
+	const HARD_MOBILE_VERIFY_MAX = 20; // all IPs combined for one mobile
+	const HARD_IP_SEND_MAX = 30;       // all mobiles combined for one IP
+	const HARD_IP_VERIFY_MAX = 60;     // all mobiles combined for one IP
 	const HARD_WINDOW_MINUTES = 60; // rolling window for the hard ceilings
 
 	/** Transient key prefixes. */

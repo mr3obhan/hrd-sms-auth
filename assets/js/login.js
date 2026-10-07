@@ -48,13 +48,28 @@
 		var param = new URLSearchParams(window.location.search).get('redirect_to');
 		return check(param) || check(document.referrer) || (cfg.homeUrl || origin + '/');
 	}
-	function api(path, payload) {
+	function api(path, payload, retried) {
 		return fetch(cfg.api + path, {
 			method: 'POST', credentials: 'same-origin',
 			headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': cfg.nonce },
 			body: JSON.stringify(payload)
 		}).then(function (res) {
-			return res.json().catch(function () { return {}; }).then(function (d) { return { ok: res.ok, status: res.status, data: d }; });
+			return res.json().catch(function () { return {}; }).then(function (d) {
+				if (res.status === 403 && !retried && (d.code === 'rest_forbidden' || (d.message && d.message.indexOf('nonce') !== -1))) {
+					return fetch(cfg.api + '/nonce', { credentials: 'same-origin' })
+						.then(function (nr) { return nr.json(); })
+						.then(function (nd) {
+							if (nd && nd.nonce) {
+								cfg.nonce = nd.nonce;
+								return api(path, payload, true);
+							}
+							return { ok: false, status: res.status, data: d };
+						}).catch(function () {
+							return { ok: false, status: res.status, data: d };
+						});
+				}
+				return { ok: res.ok, status: res.status, data: d };
+			});
 		}).catch(function () { return { ok: false, status: 0, data: { message: 'خطا در ارتباط با سرور. اتصال اینترنت را بررسی کنید.' } }; });
 	}
 
@@ -63,7 +78,7 @@
 	function Widget(mount) {
 		this.mount = mount;
 		this.pane = mount; // forms render here; replaced by a sub-pane when tabbed
-		this.state = { mobile: '', code: '', timerId: null, remain: 0 };
+		this.state = { mobile: '', code: '', regToken: '', timerId: null, remain: 0 };
 
 		if (VERIFY_MODE) {
 			this.renderMobile();        // post-login mobile verification
@@ -235,7 +250,7 @@
 			self.state.verifying = false;
 			self.busy(btn, false);
 			if (res.ok) { self.stopTimer(); return self.renderSuccess(false); }
-			if (!VERIFY_MODE && res.data && res.data.needs_registration) { self.stopTimer(); return self.renderProfile(); }
+			if (!VERIFY_MODE && res.data && res.data.needs_registration) { self.stopTimer(); self.state.regToken = res.data.reg_token || ''; return self.renderProfile(); }
 			self.showOtpErr((res.data && res.data.message) || 'کد وارد شده صحیح نیست.');
 			self.otpInputs.forEach(function (i) { i.value = ''; i.classList.remove('is-filled'); });
 			self.otpInputs[0].focus();
@@ -339,7 +354,7 @@
 		if (!first) { this.fieldError('[data-field="fname"]', 'الزامی'); ok = false; }
 		if (!last) { this.fieldError('[data-field="lname"]', 'الزامی'); ok = false; }
 
-		var payload = { mobile: this.state.mobile, code: this.state.code, first_name: first, last_name: last };
+		var payload = { mobile: this.state.mobile, code: this.state.code, reg_token: this.state.regToken, first_name: first, last_name: last };
 
 		if (COLLECT_PROFILE) {
 			var d = this._dates;
@@ -359,7 +374,7 @@
 		api('/verify-code', payload).then(function (res) {
 			self.busy(btn, false);
 			if (res.ok) { return self.renderSuccess(true); }
-			if (res.status === 410) { self.renderMobile(); return; }
+			if (res.status === 410) { self.state.regToken = ''; self.renderMobile(); return; }
 			var field = res.data && res.data.field ? res.data.field : 'nid';
 			self.fieldError('[data-field="' + (field === 'national_code' ? 'nid' : field) + '"]', (res.data && res.data.message) || 'ثبت نام ناموفق بود.');
 		});

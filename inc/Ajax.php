@@ -70,24 +70,40 @@ class Ajax {
 			wp_send_json_error( [ 'message' => 'ووکامرس نصب نیست.' ] );
 		}
 
-		$users = get_users( [ 'fields' => [ 'ID', 'user_login' ] ] );
+		global $wpdb;
+		$limit = (int) apply_filters( 'hrd_sync_wc_limit', 2000 );
+
+		// Query only users lacking billing_phone whose user_login resembles a mobile number
+		$users = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT u.ID, u.user_login
+				 FROM {$wpdb->users} u
+				 LEFT JOIN {$wpdb->usermeta} m ON (u.ID = m.user_id AND m.meta_key = 'billing_phone')
+				 WHERE (m.meta_value IS NULL OR m.meta_value = '')
+				   AND u.user_login LIKE '09%'
+				 LIMIT %d",
+				$limit
+			)
+		);
+
 		$count = 0;
-
-		foreach ( $users as $user ) {
-			$mobile = $user->user_login;
-
-			if ( ! preg_match( '/^09\d{9}$/', $mobile ) ) {
+		foreach ( (array) $users as $user ) {
+			$mobile = Helper::hrd_normalize_mobile( $user->user_login );
+			if ( ! $mobile ) {
 				continue;
 			}
 
-			if ( empty( get_user_meta( $user->ID, 'billing_phone', true ) ) ) {
-				update_user_meta( $user->ID, 'billing_phone', $mobile );
-				update_user_meta( $user->ID, 'shipping_phone', $mobile );
-				$count ++;
-			}
+			update_user_meta( (int) $user->ID, 'billing_phone', $mobile );
+			update_user_meta( (int) $user->ID, 'shipping_phone', $mobile );
+			$count++;
 		}
 
-		wp_send_json_success( [ 'message' => sprintf( 'تعداد %d کاربر با موفقیت همگام‌سازی شدند.', $count ) ] );
+		$message = sprintf( 'تعداد %d کاربر با موفقیت همگام‌سازی شدند.', $count );
+		if ( count( (array) $users ) >= $limit ) {
+			$message .= ' (بخشی از کاربران همگام‌سازی شدند؛ برای تکمیل، دوباره روی دکمه کلیک کنید).';
+		}
+
+		wp_send_json_success( [ 'message' => $message ] );
 	}
 }
 
